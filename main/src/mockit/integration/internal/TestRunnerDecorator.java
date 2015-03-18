@@ -22,8 +22,10 @@ import mockit.internal.util.*;
  */
 public class TestRunnerDecorator
 {
-   @Nullable private static SavePoint savePointForTestClass;
-   @Nullable private static SavePoint savePointForTest;
+   //@Nullable private static SavePoint savePointForTestClass;
+   //@Nullable private static SavePoint savePointForTest;
+   private static ThreadLocal<SavePoint> savePointForTestClass = new ThreadLocal<SavePoint>();
+   private static ThreadLocal<SavePoint> savePointForTest = new ThreadLocal<SavePoint>();
 
    /**
     * A "volatile boolean" is as good as a java.util.concurrent.atomic.AtomicBoolean here,
@@ -66,11 +68,11 @@ public class TestRunnerDecorator
 
       if (testClass != currentTestClass) {
          if (currentTestClass == null) {
-            savePointForTestClass = new SavePoint();
+            savePointForTestClass.set(new SavePoint());
          }
          else if (!currentTestClass.isAssignableFrom(testClass)) {
             cleanUpMocksFromPreviousTestClass();
-            savePointForTestClass = new SavePoint();
+            savePointForTestClass.set(new SavePoint());
          }
 
          TestRun.setCurrentTestClass(testClass);
@@ -98,18 +100,18 @@ public class TestRunnerDecorator
 
    private static void rollbackForTestClass()
    {
-      SavePoint savePoint = savePointForTestClass;
+      SavePoint savePoint = savePointForTestClass.get();
 
       if (savePoint != null) {
          savePoint.rollback();
-         savePointForTestClass = null;
+         savePointForTestClass.set(null);
       }
    }
 
    protected static void prepareForNextTest()
    {
-      if (savePointForTest == null) {
-         savePointForTest = new SavePoint();
+      if (savePointForTest.get() == null) {
+         savePointForTest.set(new SavePoint());
       }
 
       TestRun.prepareForNextTest();
@@ -117,11 +119,11 @@ public class TestRunnerDecorator
 
    protected static void discardTestLevelMockedTypes()
    {
-      SavePoint savePoint = savePointForTest;
+      SavePoint savePoint = savePointForTest.get();
 
       if (savePoint != null) {
          savePoint.rollback();
-         savePointForTest = null;
+         savePointForTest.set(null);
       }
    }
 
